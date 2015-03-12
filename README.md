@@ -34,4 +34,4 @@ library is not in production right now, it will be soon.
     % ... or add it to your supervision tree.
 
     % Then, later...
-    Value = ei_cache:get_value(Key).
+    Value = ei_cache:get_value(foo, Key).
