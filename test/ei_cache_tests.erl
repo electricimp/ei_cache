@@ -56,24 +56,32 @@ same_cache_different_processes() ->
     ok.
 
 miss_then_hit() ->
-    % @todo How to assert the number of times that the function gets called?
-    % We get it to send a message to us, and then assert that we didn't receive
-    % any extras.
+    % To assert that the function was not called more than once, we get it to
+    % send a message to us and then count them.
     Self = self(),
     {ok, _} = ei_cache:start_link(
                 reverse_cache,
                 fun(Key) ->
-                        Self ! {get_value_called, Key},
+                        Self ! get_value_called,
                         timer:sleep(250),
                         lists:reverse(Key)
                 end),
     ?assertEqual("cba", ei_cache:get_value(reverse_cache, "abc")),
     ?assertEqual("cba", ei_cache:get_value(reverse_cache, "abc")),
-    % @todo Count the get_value_called messages, and then assert the number.
-    receive {get_value_called, "abc"} -> ok end,
-    receive M -> erlang:error({unexpected, M}) after 0 -> ok end,
+
+    self() ! ok,
+    ?assertEqual(1, count_get_value_messages()),
     report_metrics(reverse_cache),
     ok.
+
+count_get_value_messages() ->
+    count_get_value_messages(0).
+
+count_get_value_messages(Count) ->
+    receive
+        get_value_called -> count_get_value_messages(Count + 1);
+        ok -> Count
+    end.
 
 different_keys_in_sequence() ->
     {ok, _} = ei_cache:start_link(
