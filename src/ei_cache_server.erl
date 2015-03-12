@@ -18,34 +18,34 @@ init([Name, Fun]) ->
     process_flag(trap_exit, true),
     {ok, #state{n = Name, f = Fun, t = Tid}}.
 
-handle_call({get_value, Key}, _From, State = #state{n = Name, f = F, t = T}) ->
-    case ets:lookup(T, Key) of
-        [] ->
-            % Miss; we need to spin up a worker and return that.
-            % @todo Who's watching the worker?
-            ei_cache_metrics:server_miss(Name),
-            {ok, Pid} = ei_cache_promise:start(F, Key, T),
-            Value = {promise, Pid},
-            % Use insert_new so that if the promise finishes really quickly, we
-            % don't overwrite the value with a now-defunct promise.
-            case ets:insert_new(T, {Key, Value}) of
-                false ->
-                    % It's already there.
-                    % @todo Invent a test that exercises this bit.
-                    {reply, ets:lookup(T, Key), State};
-                _ ->
-                    {reply, Value, State}
-            end;
-        [{Key, {value, Value}}] ->
-            ei_cache_metrics:server_hit(Name),
-            {reply, {value, Value}, State};
-        [{Key, {promise, P}}] ->
-            ei_cache_metrics:server_promise(Name),
-            {reply, {promise, P}, State}
-    end;
+handle_call({get_value, Key}, _From, State = #state{t = T}) ->
+    handle_lookup_result(Key, ets:lookup(T, Key), State);
 
 handle_call(_Req, _From, State) ->
     {reply, ok, State}.
+
+handle_lookup_result(Key, [], State = #state{n = Name, f = F, t = T}) ->
+    % Miss; we need to spin up a worker and return that.
+    % @todo Who's watching the worker?
+    ei_cache_metrics:server_miss(Name),
+    {ok, Pid} = ei_cache_promise:start(F, Key, T),
+    Value = {promise, Pid},
+    % Use insert_new so that if the promise finishes really quickly, we
+    % don't overwrite the value with a now-defunct promise.
+    case ets:insert_new(T, {Key, Value}) of
+        false ->
+            % It's already there.
+            % @todo Invent a test that exercises this bit.
+            handle_lookup_result(Key, ets:lookup(T, Key), State);
+        _ ->
+            {reply, Value, State}
+    end;
+handle_lookup_result(Key, [{Key, {value, Value}}], State = #state{n = Name}) ->
+    ei_cache_metrics:server_hit(Name),
+    {reply, {value, Value}, State};
+handle_lookup_result(Key, [{Key, {promise, P}}], State = #state{n = Name}) ->
+    ei_cache_metrics:server_promise(Name),
+    {reply, {promise, P}, State}.
 
 handle_cast(_Req, State) ->
     {noreply, State}.

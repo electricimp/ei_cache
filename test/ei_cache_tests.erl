@@ -17,6 +17,7 @@ all_test_() ->
 
       ?test(stress),
       ?test(stress2),
+      ?test(stress3),
 
       ?test(worker_dies)
      ]}.
@@ -143,6 +144,13 @@ stress2() ->
     Range = 1000,
     MaxDelay = 125,
     MaxLag = 125,
+    run_stress(Iterations, Range, MaxDelay, MaxLag).
+
+stress3() ->
+    Iterations = 50000,
+    Range = 1000,
+    MaxDelay = 0,
+    MaxLag = 0,
     run_stress(Iterations, Range, MaxDelay, MaxLag).
 
 run_stress(Iterations, Range, MaxDelay, MaxLag) ->
