@@ -13,17 +13,17 @@ start(Fun, Key, T) ->
                     ets:insert(T, {Key, {value, Value}}),
 
                     % Reply to the subscribers.
-                    self() ! sentinel,
+                    self() ! '$ei_cache_sentinel',
                     reply({value, Value})
             end),
     {ok, Pid}.
 
 reply(Reply) ->
     receive
-        {subscribe, {Pid, Ref}} ->
-            Pid ! {reply, Ref, Reply},
+        {'$ei_cache_subscribe', {Pid, Ref}} ->
+            Pid ! {'$ei_cache_reply', Ref, Reply},
             reply(Reply);
-        sentinel ->
+        '$ei_cache_sentinel' ->
             ok
     end.
 
@@ -33,9 +33,9 @@ get_value(T, Key, P) ->
 
 get_value(T, Key, P, TimeoutMs) ->
     Mref = erlang:monitor(process, P),
-    P ! {subscribe, {self(), Mref}},
+    P ! {'$ei_cache_subscribe', {self(), Mref}},
     receive
-        {reply, Mref, {value, Value}} ->
+        {'$ei_cache_reply', Mref, {value, Value}} ->
             erlang:demonitor(Mref, [flush]),
             Value;
         {'DOWN', Mref, _, _, noproc} ->

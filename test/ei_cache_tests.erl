@@ -98,30 +98,41 @@ different_keys_in_sequence() ->
     ok.
 
 different_keys_in_parallel() ->
+    % We have a process that "resolves" lookups by not replying to any request
+    % until it's seen all of them. This way we know that they're not
+    % sequential.
+    Pid = spawn_link(fun() -> expect_requests(4) end),
     {ok, _} = ei_cache:start_link(
                 reverse_cache,
                 fun(Key) ->
-                        timer:sleep(250),
-                        lists:reverse(Key)
+                        Pid ! {request, {self(), Key}},
+                        receive
+                            {reply, Value} -> Value
+                        end
                 end),
-    % We know that each call will take at least 250ms; if we run 4 of them in
-    % parallel and it takes more than 500ms, then we know we screwed up.
-    % This is a bit timing specific, but I'm not entirely sure how to get
-    % around that.
-    % @todo If we had a gen_server at the other end that didn't reply to any
-    % request until all of them arrived, we'd know that they weren't
-    % sequential.
-    Then = now(),
     wait_for([
               spawn_opt(fun() -> ?assertEqual("cba", ei_cache:get_value(reverse_cache, "abc")) end, [link, monitor]),
               spawn_opt(fun() -> ?assertEqual("nml", ei_cache:get_value(reverse_cache, "lmn")) end, [link, monitor]),
               spawn_opt(fun() -> ?assertEqual("rqp", ei_cache:get_value(reverse_cache, "pqr")) end, [link, monitor]),
               spawn_opt(fun() -> ?assertEqual("zyx", ei_cache:get_value(reverse_cache, "xyz")) end, [link, monitor])]),
-    Elapsed = timer:now_diff(now(), Then),
-    io:format("Elapsed = ~p\n", [Elapsed]),
-    ?assert(Elapsed =< 500000),
     report_metrics(reverse_cache),
     ok.
+
+expect_requests(Expected) ->
+    expect_requests([], 0, Expected).
+
+expect_requests(Requests, Count, Expected) when Count =:= Expected ->
+    lists:foreach(
+      fun({Pid, Key}) ->
+              Value = lists:reverse(Key),
+              Pid ! {reply, Value}
+      end, Requests);
+
+expect_requests(Requests, Count, Expected) ->
+    receive
+        {request, Request} ->
+            expect_requests([Request | Requests], Count + 1, Expected)
+    end.
 
 repeated_hits() ->
     {ok, _} = ei_cache:start_link(
