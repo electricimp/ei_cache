@@ -1,5 +1,5 @@
 -module(ei_cache).
--export([start_link/2, get_value/2, get_counts/1]).
+-export([start_link/2, get_value/2, delete/1, delete/2, get_counts/1]).
 
 start_link(Name, Fun) ->
     ei_cache_server:start_link(Name, Fun).
@@ -25,6 +25,18 @@ handle_reply(T, Key, {promise, P}) ->
 
 handle_reply(_T, _Key, {value, Value}) ->
     Value.
+
+delete(Name) ->
+    % If there's a promise in flight at the time we do the delete, we leave it
+    % alone.
+    T = ei_cache_names:table(Name),
+    ets:match_delete(T, {'_', {value, '_'}}).
+
+delete(Name, Key) ->
+    % If there's a promise in flight at the time we do the delete, we leave it
+    % alone.
+    T = ei_cache_names:table(Name),
+    ets:match_delete(T, {Key, {value, '_'}}).
 
 get_counts(Name) ->
     ei_cache_metrics:get_counts(Name).
