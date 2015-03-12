@@ -26,7 +26,23 @@ setup() ->
     ok.
 
 cleanup(_) ->
+    % We occasionally get {error, {already_started, _}} failures because
+    % (somehow) the ei_cache_server process doesn't unregister itself quickly
+    % enough. So: wait until there are no more ei_cache processes registered.
+    wait_until_ei_cache_unregistered(),
     ok.
+
+wait_until_ei_cache_unregistered() ->
+    wait_until_ei_cache_unregistered(true).
+
+wait_until_ei_cache_unregistered(false) ->
+    ok;
+wait_until_ei_cache_unregistered(true) ->
+    erlang:yield(),
+    Pred = fun(Name) ->
+                   lists:prefix("ei_cache", atom_to_list(Name))
+           end,
+    wait_until_ei_cache_unregistered(lists:any(Pred, registered())).
 
 miss_calls_fun() ->
     % Cache instances are named.
