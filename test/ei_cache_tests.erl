@@ -218,6 +218,8 @@ worker_dies_quickly() ->
     % If the worker dies, we should see an error.
     ?assertMatch({'EXIT', _}, catch ei_cache:get_value(minefield, 42)),
     % ..and the ETS table should no longer contain the promise:
+    % ..but we need to serialize on the server first:
+    ok = gen_server:call(ei_cache_names:server(minefield), ping),
     ?assertMatch([], ets:match(ei_cache_minefield_tab, '$1')),
     ok.
 
@@ -231,6 +233,8 @@ worker_dies_slowly() ->
     % If the worker dies, we should see an error.
     ?assertMatch({'EXIT', _}, catch ei_cache:get_value(minefield, 42)),
     % ..and the ETS table should no longer contain the promise:
+    % ..but we need to serialize on the server first:
+    ok = gen_server:call(ei_cache_names:server(minefield), ping),
     ?assertMatch([], ets:match(ei_cache_minefield_tab, '$1')),
     ok.
 
