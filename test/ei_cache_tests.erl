@@ -19,10 +19,14 @@ all_test_() ->
       ?test(stress2),
       ?test(stress3),
 
-      ?test(worker_dies)
+      ?test(worker_dies_quickly),
+      ?test(worker_dies_slowly)
      ]}.
 
 setup() ->
+    % Some of these tests involve process death, which some viewers might find
+    % disturbing.
+    error_logger:tty(false),
     ok.
 
 cleanup(_) ->
@@ -205,22 +209,29 @@ run_stress(Iterations, Range, MaxDelay, MaxLag) ->
 
 % @todo Can we have a stress test that runs until it sees at least one of each metric reported?
 
-worker_dies() ->
+worker_dies_quickly() ->
+    {ok, _} = ei_cache:start_link(
+                minefield,
+                fun(_Key) ->
+                        erlang:error(farewell_cruel_world)
+                end),
+    % If the worker dies, we should see an error.
+    ?assertMatch({'EXIT', _}, catch ei_cache:get_value(minefield, 42)),
+    % ..and the ETS table should no longer contain the promise:
+    ?assertMatch([], ets:match(ei_cache_minefield_tab, '$1')),
+    ok.
+
+worker_dies_slowly() ->
     {ok, _} = ei_cache:start_link(
                 minefield,
                 fun(_Key) ->
                         timer:sleep(120),
                         erlang:error(farewell_cruel_world)
                 end),
-    {Pid, Ref} = spawn_monitor(
-      fun() ->
-              ei_cache:get_value(minefield, 42)
-      end),
-    receive
-        {'DOWN', Ref, process, Pid, {farewell_cruel_world, _}} -> ok
-    end,
-    % @todo How to do that again? If the worker dies, the cache should not have
-    % a value for that at all.
+    % If the worker dies, we should see an error.
+    ?assertMatch({'EXIT', _}, catch ei_cache:get_value(minefield, 42)),
+    % ..and the ETS table should no longer contain the promise:
+    ?assertMatch([], ets:match(ei_cache_minefield_tab, '$1')),
     ok.
 
 wait_for([]) ->

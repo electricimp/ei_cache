@@ -1,10 +1,10 @@
 -module(ei_cache_promise).
--export([start/3]).
+-export([start_link/3]).
 -export([get_value/3]).
 
 % Note: while we don't need a gen_server; do we want to use proc_lib?
-start(Fun, Key, T) ->
-    Pid = erlang:spawn(
+start_link(Fun, Key, T) ->
+    Pid = erlang:spawn_link(
             fun() ->
                     % Work out the value.
                     Value = Fun(Key),
@@ -39,14 +39,20 @@ get_value(T, Key, P, TimeoutMs) ->
             erlang:demonitor(Mref, [flush]),
             Value;
         {'DOWN', Mref, _, _, noproc} ->
-            [{Key, {value, Value}}] = ets:lookup(T, Key),
-            Value;
+            lookup_value(T, Key);
         {'DOWN', Mref, _, _, normal} ->
-            [{Key, {value, Value}}] = ets:lookup(T, Key),
-            Value;
+            lookup_value(T, Key);
         {'DOWN', Mref, _, _, Error} ->
             exit(Error)
     after TimeoutMs ->
               erlang:demonitor(Mref, [flush]),
               exit(timeout)
+    end.
+
+lookup_value(T, Key) ->
+    case ets:lookup(T, Key) of
+        [{Key, {value, Value}}] ->
+            Value;
+        _ ->
+            exit(broken_promise)
     end.

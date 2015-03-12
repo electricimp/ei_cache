@@ -26,16 +26,15 @@ handle_call(_Req, _From, State) ->
 
 handle_lookup_result(Key, [], State = #state{n = Name, f = F, t = T}) ->
     % Miss; we need to spin up a worker and return that.
-    % @todo Who's watching the worker?
     ei_cache_metrics:server_miss(Name),
-    {ok, Pid} = ei_cache_promise:start(F, Key, T),
+    {ok, Pid} = ei_cache_promise:start_link(F, Key, T),
     Value = {promise, Pid},
     % Use insert_new so that if the promise finishes really quickly, we
     % don't overwrite the value with a now-defunct promise.
     case ets:insert_new(T, {Key, Value}) of
         false ->
             % It's already there.
-            % @todo Invent a test that exercises this bit.
+            % @todo Invent a test that exercises this bit, somehow.
             handle_lookup_result(Key, ets:lookup(T, Key), State);
         _ ->
             {reply, Value, State}
@@ -50,6 +49,12 @@ handle_lookup_result(Key, [{Key, {promise, P}}], State = #state{n = Name}) ->
 handle_cast(_Req, State) ->
     {noreply, State}.
 
+handle_info({'EXIT', _Pid, normal}, State) ->
+    % The promise exited normally; ignore it.
+    {noreply, State};
+handle_info({'EXIT', Pid, _Error}, State = #state{t = T}) ->
+    ets:match_delete(T, {'_', {promise, Pid}}),
+    {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
