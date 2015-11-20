@@ -4,7 +4,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
-          n, f, t
+          name, func, tid
          }).
 
 start_link(Name, Fun) ->
@@ -16,15 +16,15 @@ init([Name, Fun]) ->
     % to know that, though.
     Tid = ets:new(ei_cache_names:table(Name), [named_table, public]),
     process_flag(trap_exit, true),
-    {ok, #state{n = Name, f = Fun, t = Tid}}.
+    {ok, #state{name = Name, func = Fun, tid = Tid}}.
 
-handle_call({get_value, Key}, _From, State = #state{t = T}) ->
+handle_call({get_value, Key}, _From, State = #state{tid = T}) ->
     handle_lookup_result(Key, ets:lookup(T, Key), State);
 
 handle_call(_Req, _From, State) ->
     {reply, ok, State}.
 
-handle_lookup_result(Key, [], State = #state{n = Name, f = F, t = T}) ->
+handle_lookup_result(Key, [], State = #state{name = Name, func = F, tid = T}) ->
     % Miss; we need to spin up a worker and return that.
     ei_cache_metrics:server_miss(Name),
     {ok, Pid} = ei_cache_promise:start_link(F, Key, T),
@@ -39,10 +39,10 @@ handle_lookup_result(Key, [], State = #state{n = Name, f = F, t = T}) ->
         _ ->
             {reply, Value, State}
     end;
-handle_lookup_result(Key, [{Key, {value, Value}}], State = #state{n = Name}) ->
+handle_lookup_result(Key, [{Key, {value, Value}}], State = #state{name = Name}) ->
     ei_cache_metrics:server_hit(Name),
     {reply, {value, Value}, State};
-handle_lookup_result(Key, [{Key, {promise, P}}], State = #state{n = Name}) ->
+handle_lookup_result(Key, [{Key, {promise, P}}], State = #state{name = Name}) ->
     ei_cache_metrics:server_promise(Name),
     {reply, {promise, P}, State}.
 
@@ -52,7 +52,7 @@ handle_cast(_Req, State) ->
 handle_info({'EXIT', _Pid, normal}, State) ->
     % The promise exited normally; ignore it.
     {noreply, State};
-handle_info({'EXIT', Pid, _Error}, State = #state{t = T}) ->
+handle_info({'EXIT', Pid, _Error}, State = #state{tid = T}) ->
     ets:match_delete(T, {'_', {promise, Pid}}),
     {noreply, State};
 handle_info(_Info, State) ->
