@@ -43,5 +43,10 @@ get_counts(Name) ->
      {server_promises, Miss2},
      {total_misses, Misses},
      {total_requests, Requests},
-     {hit_ratio, Hits / Requests},
-     {miss_ratio, Misses / Requests}].
+     {hit_ratio, safe_div(Hits, Requests)},
+     {miss_ratio, safe_div(Misses, Requests)}].
+
+safe_div(_N, 0) ->
+    0.0;
+safe_div(N, D) ->
+    N / D.
