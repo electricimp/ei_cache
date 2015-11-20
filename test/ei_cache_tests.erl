@@ -24,6 +24,8 @@ all_test_() ->
      ]}.
 
 setup() ->
+    % ensure the app config is loaded
+    application:start(ei_cache),
     % Some of these tests involve process death, which some viewers might find
     % disturbing.
     error_logger:tty(false),
@@ -247,5 +249,5 @@ wait_for([{Pid, Ref} | Waits]) ->
     end.
 
 report_metrics(Name) ->
-    Counts = ei_cache:get_counts(Name),
+    Counts = ei_cache_metrics_ets:get_counts(Name),
     ?debugFmt("~p: ~p\n", [Name, Counts]).

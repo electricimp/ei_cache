@@ -1,5 +1,5 @@
 -module(ei_cache).
--export([start_link/2, get_value/2, delete/1, delete/2, get_counts/1]).
+-export([start_link/2, get_value/2, delete/1, delete/2]).
 
 start_link(Name, Fun) ->
     ei_cache_server:start_link(Name, Fun).
@@ -37,6 +37,3 @@ delete(Name, Key) ->
     % alone.
     T = ei_cache_names:table(Name),
     ets:match_delete(T, {Key, {value, '_'}}).
-
-get_counts(Name) ->
-    ei_cache_metrics:get_counts(Name).
