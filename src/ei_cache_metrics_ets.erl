@@ -2,6 +2,8 @@
 -export([init/1, new_spiral/2, increment/2, get_counts/1]).
 
 init(Name) ->
+    % Create an ETS table to hold the metrics. This is called from
+    % ei_cache_server, so the table is owned by the gen_server process.
     T = metrics_table_name(Name),
     T = ets:new(T, [named_table, public]).
 
@@ -19,20 +21,20 @@ get_counts(Name) ->
     %   supervisor.
     % - I'd like the counts to be reset if the cache dies in any way, probably.
     T = metrics_table_name(Name),
-    Hit1 = ets:lookup_element(T, client_hits, 2),
-    Hit2 = ets:lookup_element(T, server_hits, 2),
-    Miss0 = ets:lookup_element(T, client_promises, 2),
-    Miss1 = ets:lookup_element(T, server_misses, 2),
-    Miss2 = ets:lookup_element(T, server_promises, 2),
-    Hits = Hit1 + Hit2,
-    Misses = Miss0 + Miss1 + Miss2,
+    ClientHits = ets:lookup_element(T, client_hits, 2),
+    ServerHits = ets:lookup_element(T, server_hits, 2),
+    ClientPromises = ets:lookup_element(T, client_promises, 2),
+    ServerMisses = ets:lookup_element(T, server_misses, 2),
+    ServerPromises = ets:lookup_element(T, server_promises, 2),
+    Hits = ClientHits + ServerHits,
+    Misses = ClientPromises + ServerMisses + ServerPromises,
     Requests = Hits + Misses,
-    [{client_hits, Hit1},
-     {server_hits, Hit2},
+    [{client_hits, ClientHits},
+     {server_hits, ServerHits},
      {total_hits, Hits},
-     {client_promises, Miss0},
-     {server_misses, Miss1},
-     {server_promises, Miss2},
+     {client_promises, ClientPromises},
+     {server_misses, ServerMisses},
+     {server_promises, ServerPromises},
      {total_misses, Misses},
      {total_requests, Requests},
      {hit_ratio, safe_div(Hits, Requests)},

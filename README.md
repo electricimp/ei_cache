@@ -30,8 +30,45 @@ library is not in production right now, it will be soon.
 
 ## Using it
 
-    {ok, _} = ei_cache:start_link(foo, fun(Key) -> lookup_key_somehow(Key) end).
+    Cache = foo.
+    {ok, _} = ei_cache:start_link(Cache, fun(Key) -> lookup_key_somehow(Key) end).
     % ... or add it to your supervision tree.
 
     % Then, later...
-    Value = ei_cache:get_value(foo, Key).
+    Value = ei_cache:get_value(Cache, Key).
+
+## Metrics
+
+By default, `ei_cache` reports metrics to an ETS table. You can get the current
+values with `ei_cache_metrics:get_counts(Cache)`. Alternatively, you can report
+metrics to folsom by putting the following in your config file:
+
+    {ei_cache, [{metrics_module, ei_cache_metrics_folsom}]}
+
+It reports the following metrics:
+
+- `server_misses`: Cache misses.
+- `client_hits`: First chance cache hits.
+- `server_hits`: Second chance cache hits.
+- `client_promises`: The client found a promise when querying the cache.
+- `server_promises`: The server found a promise when querying the cache. This
+  is a "second chance" promise, more-or-less.
+
+A word on `client` vs. `server`: the whole point of this library is to avoid
+the bottleneck imposed by using a single `gen_server`, so the caller (client)
+does all of the ETS queries.
+
+- If the value is present, then that's a "client hit".
+- If the value isn't present, but there's already a query in flight, that's a
+  "client promise".
+- If the value isn't present, and this is the first miss, then we call the
+  `gen_server`. That -- usually -- results in a "server miss".
+- Sometimes, the client is racing for the same key and the server has either
+  already found the value, or has already started a worker. Those are "server
+  hit" and "server promise" respectively.
+
+For a simple set of hit/miss metrics:
+
+    Hits = ClientHits + ServerHits.
+    Misses = ClientPromises + ServerMisses + ServerPromises.
+    Requests = Hits + Misses.
