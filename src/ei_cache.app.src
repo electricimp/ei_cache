@@ -7,5 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {env, []}
+  {env, [
+         {metrics_module, ei_cache_metrics_ets}]}
  ]}.
