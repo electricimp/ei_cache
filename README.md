@@ -65,7 +65,7 @@ does all of the ETS queries.
   already found the value, or has already started a worker. Those are "server
   hit" and "server promise" respectively.
 
-## Hit Ratio
+### Hit Ratio
 
 For a simple set of hit/miss metrics:
 
