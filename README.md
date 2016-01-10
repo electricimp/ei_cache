@@ -65,8 +65,11 @@ does all of the ETS queries.
   already found the value, or has already started a worker. Those are "server
   hit" and "server promise" respectively.
 
+## Hit Ratio
+
 For a simple set of hit/miss metrics:
 
     Hits = ClientHits + ServerHits.
     Misses = ClientPromises + ServerMisses + ServerPromises.
     Requests = Hits + Misses.
+    Ratio = Hits / Requests.
