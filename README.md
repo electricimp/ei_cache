@@ -24,9 +24,7 @@ Add the following to your project's `rebar.config`:
 
 ## Is it ready for use?
 
-We built this to be used in Electric Imp's cloud backend. It's based on an
-algorithm that we're already using in production. While *this* particular
-library is not in production right now, it will be soon.
+Yes. We're using it in production at Electric Imp.
 
 ## Using it
 
