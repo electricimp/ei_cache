@@ -29,8 +29,9 @@ handle_lookup_result(Key, [], State = #state{name = Name, func = F, tid = T}) ->
     ei_cache_metrics:server_miss(Name),
     {ok, Pid} = ei_cache_promise:start_link(F, Key, T),
     Value = {promise, Pid},
-    % Use insert_new so that if the promise finishes really quickly, we
-    % don't overwrite the value with a now-defunct promise.
+    % Use insert_new so that if the promise finishes really quickly (and writes
+    % the value to the ETS table), we don't overwrite the value with a
+    % now-defunct promise.
     case ets:insert_new(T, {Key, Value}) of
         false ->
             % It's already there.
