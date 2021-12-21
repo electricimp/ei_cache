@@ -19,7 +19,7 @@ Add the following to your project's `rebar.config`:
 
     {deps, [
         {ei_cache, ".*",
-         {git, "git://github.com/electricimp/ei_cache.git", {tag, "1.0"}}}
+         {git, "git://github.com/electricimp/ei_cache.git", {tag, "1.0.1"}}}
     ]}.
 
 ## Is it ready for use?
