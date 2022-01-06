@@ -73,3 +73,7 @@ For a simple set of hit/miss metrics:
     Misses = ClientPromises + ServerMisses + ServerPromises.
     Requests = Hits + Misses.
     Ratio = Hits / Requests.
+
+## Caveats
+
+- **There is no eviction strategy** -- This is deliberate, though arguably naive.
