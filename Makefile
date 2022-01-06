@@ -1,16 +1,18 @@
 all: get-deps compile eunit
 
+REBAR ?= rebar3
+
 get-deps:
-	./rebar get-deps
-	
+	$(REBAR) get-deps
+
 compile:
-	./rebar compile
-	
+	$(REBAR) compile
+
 eunit:
-	./rebar skip_deps=true eunit
+	$(REBAR) eunit skip_deps=true
 
 console:
 	erl -pa deps/*/ebin -pa ebin
 
 clean:
-	./rebar clean
+	$(REBAR) clean
