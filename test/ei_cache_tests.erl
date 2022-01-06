@@ -15,10 +15,6 @@ all_test_() ->
 
       ?test(repeated_hits),
 
-      ?test(stress),
-      ?test(stress2),
-      ?test(stress3),
-
       ?test(worker_dies_quickly),
       ?test(worker_dies_slowly)
      ]}.
@@ -172,44 +168,6 @@ repeated_hits() ->
                  end, [link, monitor]) || _ <- lists:seq(1, 333)]),
     report_metrics(reverse_cache),
     ok.
-
-stress() ->
-    Iterations = 50000,
-    Range = 1000,
-    MaxDelay = 0,
-    MaxLag = 125,
-    run_stress(Iterations, Range, MaxDelay, MaxLag).
-
-stress2() ->
-    Iterations = 50000,
-    Range = 1000,
-    MaxDelay = 125,
-    MaxLag = 125,
-    run_stress(Iterations, Range, MaxDelay, MaxLag).
-
-stress3() ->
-    Iterations = 50000,
-    Range = 1000,
-    MaxDelay = 0,
-    MaxLag = 0,
-    run_stress(Iterations, Range, MaxDelay, MaxLag).
-
-run_stress(Iterations, Range, MaxDelay, MaxLag) ->
-    {ok, _} = ei_cache:start_link(
-                hash_cache,
-                fun(Key) ->
-                        timer:sleep(crypto:rand_uniform(0, MaxLag + 1)),
-                        erlang:phash2(Key)
-                end),
-    wait_for([spawn_opt(
-                fun() ->
-                        timer:sleep(crypto:rand_uniform(0, MaxDelay + 1)),
-                        Key = crypto:rand_uniform(1, Range),
-                        ?assertEqual(erlang:phash2(Key), ei_cache:get_value(hash_cache, Key))
-                end, [link, monitor]) || _N <- lists:seq(1, Iterations)]),
-    report_metrics(hash_cache).
-
-% @todo Can we have a stress test that runs until it sees at least one of each metric reported?
 
 worker_dies_quickly() ->
     {ok, _} = ei_cache:start_link(
