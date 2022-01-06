@@ -19,8 +19,12 @@ Add the following to your project's `rebar.config`:
 
     {deps, [
         {ei_cache, ".*",
-         {git, "git://github.com/electricimp/ei_cache.git", {tag, "1.0.1"}}}
+         {git, "git://github.com/electricimp/ei_cache.git", {tag, "1.0.2"}}}
     ]}.
+
+Or to `mix.exs`:
+
+    {:ei_cache, git: "https://github.com/electricimp/ei_cache.git", tag: "1.0.2"},
 
 ## Is it ready for use?
 
