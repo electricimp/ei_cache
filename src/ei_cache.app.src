@@ -1,6 +1,6 @@
 {application, ei_cache,
  [
-  {description, ""},
+  {description, "Stampede-resistant cache library"},
   {vsn, "1"},
   {registered, []},
   {applications, [
