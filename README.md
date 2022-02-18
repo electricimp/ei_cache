@@ -55,6 +55,12 @@ It reports the following metrics:
 - `client_promises`: The client found a promise when querying the cache.
 - `server_promises`: The server found a promise when querying the cache. This
   is a "second chance" promise, more-or-less.
+- `hits`: `client_hits + server_hits`.
+- `misses`: `server_misses + client_promises + server_promises`.
+- `requests`: `hits + missses`.
+
+The last three are aggregate metrics, because getting Graphite to report the
+cache hit/miss ratio from the other metrics is over-complicated.
 
 A word on `client` vs. `server`: the whole point of this library is to avoid
 the bottleneck imposed by using a single `gen_server`, so the caller (client)
@@ -69,15 +75,7 @@ does all of the ETS queries.
   already found the value, or has already started a worker. Those are "server
   hit" and "server promise" respectively.
 
-### Hit Ratio
-
-For a simple set of hit/miss metrics:
-
-    Hits = ClientHits + ServerHits.
-    Misses = ClientPromises + ServerMisses + ServerPromises.
-    Requests = Hits + Misses.
-    Ratio = Hits / Requests.
-
 ## Caveats
 
 - **There is no eviction strategy** -- This is deliberate, though arguably naive.
+  Use `ei_cache:delete(Cache)` to purge the cache.
